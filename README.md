@@ -12,3 +12,7 @@ Currently supported functions:
  * `recv`
  * `read`
  * `printf`
+
+----
+
+Creditz to ColdHeat, modified by bspar because <3

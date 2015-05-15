@@ -84,11 +84,20 @@ def calculate_buffer_size(ea):
 	instr = idc.GetDisasm(ea)
 	buf = instr.split(',')[1].strip()
 	if "+" in buf:
-		size = hex2int(buf[buf.find('+')+1:len(buf)-1])
-		return stack_offset(ea) - size
+		try:
+			size = hex2int(buf[buf.find('+')+1:len(buf)-1])
+		except ValueError:
+			old = buf[buf.find('+')+1:len(buf)]
+			idc.OpHex(ea, -1)
+			instr = idc.GetDisasm(ea)
+			buf = instr.split(',')[1].strip()
+			size = hex2int(buf[buf.find('-')+1:len(buf)-1])
+		return size
+		# return stack_offset(ea) - size
 	elif "-" in buf:
 		size = hex2int(buf[buf.find('-')+1:len(buf)-1])
-		return stack_offset(ea) + size
+		return size
+		# return stack_offset(ea) + size
 
 BUFFER_SIZE = 0
 def stack_calc(function):
@@ -134,11 +143,13 @@ def test_fgets(ea):
 	try:
 		if "offset" in arg_dict['s']:
 			section = arg_dict['s'].split(' ')[1]
-			arg_dict['s'] = bss[section]		
+			arg_dict['s'] = bss[section]        
 	except TypeError:
 		arg_dict['s'] = calculate_buffer_size(arg_dict['s'])
 
 	if arg_dict['s'] < arg_dict['n']:
+		print 'Found vulnerable fgets'
+		print 'buf Size: ' + str(arg_dict['s'])
 		return True, hex(ea), arg_dict
 	else:
 		return False, hex(ea), arg_dict
@@ -222,9 +233,9 @@ bss = {}
 while item != BADADDR:
    next = idc.NextHead(item, end)
    if next != BADADDR:
-      bss[idc.Name(item)] = next - item
+		bss[idc.Name(item)] = next - item
    else:
-      bss[idc.Name(item)] = end - item
+		bss[idc.Name(item)] = end - item
    item = next
 
 ### Populate Functions
@@ -272,4 +283,6 @@ print "read", find_calls('read')
 for x in find_calls('read'):
 	res = test_read(x)
 	print '\t', res
-	if res[0]:	idc.SetColor(res[1], CIC_ITEM, 0x0000ff)
+	if res[0]:	idc.SetColor(int(res[1], 16), CIC_ITEM, 0x0000ff)
+
+
